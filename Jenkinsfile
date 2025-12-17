@@ -25,7 +25,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    url: '/dotnet-hello-world.git'
+                    url: 'https://github.com/kshitijarakshe/Net-application.git'
             }
         }
 
