@@ -2,56 +2,62 @@ pipeline {
     agent any
 
     parameters {
-        choice(name: 'ENV', choices: ['UAT', 'PROD'], description: 'Select deployment environment')
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['UAT', 'PROD'],
+            description: 'Select deployment environment'
+        )
     }
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('dock-cred')  // Jenkins global credential ID
-        AWS_CREDENTIALS = credentials('aws-cred')    // Jenkins global credential ID
-        IMAGE_NAME = "kshitijadock/dotnet-hello-world"
+        DOCKER_IMAGE = "kshitijadock/dotnet-hello-world"
+        DOCKER_TAG   = "${BUILD_NUMBER}"
+        DOCKER_CREDS = credentials('dock-cred')
+
+        AWS_SSH = credentials('ec2-ssh-key')
+
+        UAT_IP  = "51.20.134.44"
+        PROD_IP = "51.20.134.44"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/kshitijarakshe/Net-application.git/dotnet-hello-world.git'
+                git branch: 'main',
+                    url: '/dotnet-hello-world.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build("${env.IMAGE_NAME}:${params.ENV}-${env.BUILD_NUMBER}")
-                }
+                sh """
+                docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+                """
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Docker Login & Push') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKER_HUB_CREDENTIALS') {
-                        docker.image("${env.IMAGE_NAME}:${params.ENV}-${env.BUILD_NUMBER}").push()
-                    }
-                }
+                sh """
+                echo $DOCKER_CREDS_PSW | docker login -u $DOCKER_CREDS_USR --password-stdin
+                docker push $DOCKER_IMAGE:$DOCKER_TAG
+                """
             }
         }
 
         stage('Deploy to EC2') {
             steps {
                 script {
-                    def host = params.ENV == 'UAT' ? 'uat-ec2-ip' : 'prod-ec2-ip'
-                    def sshUser = 'ec2-user'
-                    def dockerImage = "${env.IMAGE_NAME}:${params.ENV}-${env.BUILD_NUMBER}"
+                    def TARGET_IP = (params.ENVIRONMENT == 'UAT') ? env.UAT_IP : env.PROD_IP
 
-                    // Deploy via SSH
                     sh """
-                    ssh -o StrictHostKeyChecking=no ${sshUser}@${host} '
-                        docker pull ${dockerImage} &&
-                        docker stop dotnet-api || true &&
-                        docker rm dotnet-api || true &&
-                        docker run -d --name dotnet-api -p 80:80 ${dockerImage}
-                    '
+                    ssh -o StrictHostKeyChecking=no ${ubuntu}@${51.20.134.44} << EOF
+                      docker pull $DOCKER_IMAGE:$DOCKER_TAG
+                      docker stop dotnet-app || true
+                      docker rm dotnet-app || true
+                      docker run -d -p 80:5000 --name dotnet-app $DOCKER_IMAGE:$DOCKER_TAG
+                    EOF
                     """
                 }
             }
@@ -60,8 +66,8 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    def host = params.ENV == 'UAT' ? 'uat-ec2-ip' : 'prod-ec2-ip'
-                    sh "curl -f http://${host} || echo 'Health check failed!'"
+                    def TARGET_IP = (params.ENVIRONMENT == 'UAT') ? env.UAT_IP : env.PROD_IP
+                    sh "curl -f http://${TARGET_IP}/ || exit 1"
                 }
             }
         }
