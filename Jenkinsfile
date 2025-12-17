@@ -6,9 +6,9 @@ pipeline {
     }
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('kshitijadock')  // Jenkins global credential ID
+        DOCKER_HUB_CREDENTIALS = credentials('dock-cred')  // Jenkins global credential ID
         AWS_CREDENTIALS = credentials('aws-cred')    // Jenkins global credential ID
-        IMAGE_NAME = "yourdockerhubusername/dotnet-hello-world"
+        IMAGE_NAME = "kshitijadock/dotnet-hello-world"
     }
 
     stages {
