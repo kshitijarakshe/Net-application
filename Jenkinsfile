@@ -46,22 +46,18 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
-            steps {
-                script {
-                    def TARGET_IP = (params.ENVIRONMENT == 'UAT') ? env.UAT_IP : env.PROD_IP
-
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${ubuntu}@${51.20.134.44} << EOF
-                      docker pull $DOCKER_IMAGE:$DOCKER_TAG
-                      docker stop dotnet-app || true
-                      docker rm dotnet-app || true
-                      docker run -d -p 80:5000 --name dotnet-app $DOCKER_IMAGE:$DOCKER_TAG
-                    EOF
-                    """
-                }
-            }
-        }
+       stage('Deploy to EC2') {
+    steps {
+        sh """
+        ssh -o StrictHostKeyChecking=no ubuntu@51.20.134.44 << EOF
+          docker pull kshitijadock/dotnet-hello-world:${BUILD_NUMBER}
+          docker stop dotnet-app || true
+          docker rm dotnet-app || true
+          docker run -d -p 80:5000 --name dotnet-app kshitijadock/dotnet-hello-world:${BUILD_NUMBER}
+        EOF
+        """
+    }
+}
 
         stage('Health Check') {
             steps {
