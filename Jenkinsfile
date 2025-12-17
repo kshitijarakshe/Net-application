@@ -6,8 +6,8 @@ pipeline {
     }
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-id')  // Jenkins global credential ID
-        AWS_CREDENTIALS = credentials('aws-credentials-id')    // Jenkins global credential ID
+        DOCKER_HUB_CREDENTIALS = credentials('kshitijadock')  // Jenkins global credential ID
+        AWS_CREDENTIALS = credentials('aws-cred')    // Jenkins global credential ID
         IMAGE_NAME = "yourdockerhubusername/dotnet-hello-world"
     }
 
@@ -15,7 +15,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/<your-username>/dotnet-hello-world.git'
+                git branch: 'main', url: 'https://github.com/kshitijarakshe/Net-application.git/dotnet-hello-world.git'
             }
         }
 
